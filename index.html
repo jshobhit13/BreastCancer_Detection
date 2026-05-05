@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The AI That Learns to See Cancer</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=IBM+Plex+Mono:wght@400;500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0f0f0f;
+    --paper: #f8f4ee;
+    --cream: #f0ead8;
+    --rose: #c0392b;
+    --rose-light: #e74c3c;
+    --gold: #d4a017;
+    --teal: #1a6b6b;
+    --teal-light: #2e9e9e;
+    --slate: #2c3e50;
+    --muted: #7f8c8d;
+    --highlight: #fff3cd;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Lato', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    overflow-x: hidden;
+  }
+
+  /* ─── PROGRESS BAR ─── */
+  #progress-bar {
+    position: fixed; top: 0; left: 0; width: 0%;
+    height: 4px; background: var(--rose);
+    z-index: 1000; transition: width 0.2s;
+  }
+
+  /* ─── NAV DOTS ─── */
+  #nav-dots {
+    position: fixed; right: 20px; top: 50%;
+    transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 12px;
+    z-index: 999;
+  }
+  .nav-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%; border: 2px solid var(--muted);
+    cursor: pointer; transition: all 0.3s;
+    background: transparent;
+  }
+  .nav-dot.active { background: var(--rose); border-color: var(--rose); transform: scale(1.3); }
+  .nav-dot:hover { border-color: var(--rose); }
+
+  /* ─── CHAPTER LABELS ─── */
+  .chapter-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem; letter-spacing: 0.15em;
+    color: var(--muted); text-transform: uppercase;
+    margin-bottom: 12px; display: block;
+  }
+
+  /* ─── COVER ─── */
+  #cover {
+    min-height: 100vh;
+    background: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    position: relative; overflow: hidden;
+    padding: 40px 20px;
+  }
+  .cover-bg {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 30% 40%, #1a0a0a 0%, #0f0f0f 60%, #0a1a1a 100%);
+  }
+  .dna-grid {
+    position: absolute; inset: 0; opacity: 0.06;
+    background-image:
+      repeating-linear-gradient(0deg, #fff 0, #fff 1px, transparent 1px, transparent 40px),
+      repeating-linear-gradient(90deg, #fff 0, #fff 1px, transparent 1px, transparent 40px);
+  }
+  .cover-content { position: relative; z-index: 2; text-align: center; max-width: 800px; }
+  .cover-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem; letter-spacing: 0.25em;
+    color: var(--rose); text-transform: uppercase;
+    margin-bottom: 24px; display: block;
+  }
+  .cover-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.5rem, 7vw, 5rem);
+    font-weight: 900; color: #fff;
+    line-height: 1.1; margin-bottom: 20px;
+  }
+  .cover-title em { color: var(--rose); font-style: italic; }
+  .cover-subtitle {
+    font-size: 1.1rem; color: #aaa;
+    max-width: 560px; margin: 0 auto 40px;
+    line-height: 1.7;
+  }
+  .cover-authors {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem; color: #666;
+    margin-bottom: 50px;
+  }
+  .scroll-cue {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 8px; color: #555; font-size: 0.8rem;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.1em; animation: bounce 2s infinite;
+  }
+  .scroll-arrow { font-size: 1.4rem; }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(8px); }
+  }
+
+  /* ─── STATS TICKER ─── */
+  .stat-ticker {
+    display: flex; gap: 40px; margin-bottom: 50px;
+    justify-content: center; flex-wrap: wrap;
+  }
+  .stat-pill {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 40px; padding: 10px 24px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem; font-weight: 700; color: var(--rose);
+    display: block;
+  }
+  .stat-desc { font-size: 0.75rem; color: #888; }
+
+  /* ─── SECTIONS ─── */
+  .section {
+    min-height: 100vh;
+    padding: 80px 20px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .section-inner { max-width: 900px; width: 100%; }
+
+  /* ─── PROBLEM SECTION ─── */
+  #problem { background: var(--cream); }
+
+  .big-quote {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 700; line-height: 1.3;
+    color: var(--ink); margin-bottom: 32px;
+    border-left: 6px solid var(--rose);
+    padding-left: 28px;
+  }
+  .big-quote span { color: var(--rose); }
+
+  .body-text {
+    font-size: 1.08rem; line-height: 1.85;
+    color: #2d2d2d; margin-bottom: 20px;
+  }
+
+  .callout-box {
+    background: #fff;
+    border: 1px solid #e0d8c8;
+    border-left: 5px solid var(--rose);
+    border-radius: 0 8px 8px 0;
+    padding: 20px 24px;
+    margin: 28px 0;
+  }
+  .callout-box.teal { border-left-color: var(--teal); }
+  .callout-box.gold { border-left-color: var(--gold); }
+  .callout-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--rose);
+    margin-bottom: 8px;
+  }
+  .callout-box.teal .callout-title { color: var(--teal); }
+  .callout-box.gold .callout-title { color: var(--gold); }
+  .callout-text { font-size: 1rem; line-height: 1.7; }
+
+  /* ─── SURVIVAL VISUAL ─── */
+  .survival-viz {
+    display: flex; gap: 20px; margin: 32px 0; flex-wrap: wrap;
+  }
+  .survival-card {
+    flex: 1; min-width: 200px;
+    padding: 28px 24px; border-radius: 12px;
+    text-align: center; position: relative; overflow: hidden;
+  }
+  .survival-card.good { background: var(--teal); color: #fff; }
+  .survival-card.bad { background: var(--rose); color: #fff; }
+  .survival-pct {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.5rem; font-weight: 900;
+    display: block; line-height: 1;
+  }
+  .survival-label { font-size: 0.9rem; opacity: 0.85; margin-top: 6px; }
+  .survival-stage { font-size: 0.75rem; opacity: 0.65; margin-top: 4px; font-family: 'IBM Plex Mono', monospace; }
+
+  /* ─── SOLUTION ─── */
+  #solution { background: #fff; }
+
+  .model-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 16px; margin: 32px 0;
+  }
+  .model-card {
+    border: 2px solid #e0d8c8; border-radius: 12px;
+    padding: 20px; text-align: center;
+    transition: all 0.3s; cursor: default;
+    background: var(--paper);
+  }
+  .model-card:hover { border-color: var(--teal); transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+  .model-icon { font-size: 2rem; margin-bottom: 10px; }
+  .model-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem; font-weight: 500; color: var(--teal);
+    margin-bottom: 6px;
+  }
+  .model-params { font-size: 0.8rem; color: var(--muted); }
+  .model-best { font-size: 0.72rem; color: var(--rose); font-weight: 700; margin-top: 6px; }
+
+  /* ─── HOW IT WORKS ─── */
+  #how { background: var(--slate); color: #eee; }
+  #how .chapter-label { color: rgba(255,255,255,0.4); }
+  #how .big-quote { color: #fff; border-left-color: var(--teal-light); }
+  #how .big-quote span { color: var(--teal-light); }
+
+  .pipeline-steps {
+    display: flex; flex-direction: column; gap: 0;
+    margin: 36px 0; position: relative;
+  }
+  .pipeline-steps::before {
+    content: '';
+    position: absolute; left: 28px; top: 0; bottom: 0;
+    width: 2px; background: rgba(255,255,255,0.1);
+  }
+  .pipeline-step {
+    display: flex; align-items: flex-start; gap: 20px;
+    padding: 20px 0; position: relative;
+  }
+  .step-num {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--teal); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700;
+    flex-shrink: 0; z-index: 1;
+    border: 3px solid var(--slate);
+  }
+  .step-content { padding-top: 12px; }
+  .step-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 6px;
+  }
+  .step-body { font-size: 0.95rem; color: #aaa; line-height: 1.7; }
+
+  /* ─── RESULTS ─── */
+  #results { background: var(--paper); }
+
+  .results-table {
+    width: 100%; border-collapse: collapse;
+    margin: 32px 0; background: #fff;
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+  }
+  .results-table th {
+    background: var(--ink); color: #fff;
+    padding: 14px 16px; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem; letter-spacing: 0.1em; text-align: left;
+  }
+  .results-table td {
+    padding: 14px 16px; border-bottom: 1px solid #f0ead8;
+    font-size: 0.95rem;
+  }
+  .results-table tr:last-child td { border-bottom: none; }
+  .results-table tr.winner { background: #f0fff8; }
+  .results-table tr.winner td { font-weight: 700; }
+  .winner-badge {
+    background: var(--teal); color: #fff;
+    border-radius: 20px; padding: 2px 10px;
+    font-size: 0.7rem; font-family: 'IBM Plex Mono', monospace;
+    margin-left: 8px;
+  }
+
+  .accuracy-bar-wrap { display: flex; align-items: center; gap: 10px; }
+  .accuracy-bar-bg {
+    flex: 1; height: 8px; background: #e0d8c8; border-radius: 4px; overflow: hidden;
+  }
+  .accuracy-bar-fill {
+    height: 100%; border-radius: 4px;
+    background: linear-gradient(90deg, var(--teal), var(--teal-light));
+    transition: width 1s ease;
+  }
+  .accuracy-bar-fill.rose-bar {
+    background: linear-gradient(90deg, var(--rose), #e74c3c);
+  }
+
+  /* ─── QUIZ ─── */
+  #quiz { background: var(--ink); color: #fff; }
+  #quiz .chapter-label { color: rgba(255,255,255,0.35); }
+
+  .quiz-wrapper { max-width: 700px; }
+  .quiz-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem; font-weight: 700; color: #fff;
+    margin-bottom: 8px;
+  }
+  .quiz-subtitle { color: #888; font-size: 0.95rem; margin-bottom: 36px; }
+
+  .quiz-q {
+    display: none;
+    animation: fadeIn 0.4s ease;
+  }
+  .quiz-q.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .q-number {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem; color: var(--rose); letter-spacing: 0.15em; margin-bottom: 10px;
+  }
+  .q-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem; color: #fff; margin-bottom: 24px; line-height: 1.5;
+  }
+  .q-options { display: flex; flex-direction: column; gap: 12px; }
+  .q-opt {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px; padding: 14px 18px;
+    cursor: pointer; font-size: 0.95rem;
+    transition: all 0.2s; color: #ddd;
+    text-align: left;
+  }
+  .q-opt:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.25); }
+  .q-opt.correct { background: rgba(46,158,158,0.2); border-color: var(--teal-light); color: #fff; }
+  .q-opt.wrong { background: rgba(192,57,43,0.2); border-color: var(--rose); color: #fff; }
+
+  .q-feedback {
+    margin-top: 16px; padding: 14px 18px;
+    border-radius: 8px; font-size: 0.92rem; line-height: 1.6;
+    display: none;
+  }
+  .q-feedback.show { display: block; }
+  .q-feedback.correct-fb { background: rgba(46,158,158,0.15); border: 1px solid var(--teal-light); color: #b2dfdf; }
+  .q-feedback.wrong-fb { background: rgba(192,57,43,0.15); border: 1px solid var(--rose); color: #f5b7b1; }
+
+  .q-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 28px; }
+  .q-btn {
+    background: var(--rose); color: #fff;
+    border: none; border-radius: 8px;
+    padding: 10px 24px; cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem; letter-spacing: 0.1em;
+    transition: all 0.2s;
+  }
+  .q-btn:hover { background: var(--rose-light); transform: translateY(-2px); }
+  .q-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .q-score-display { color: var(--gold); font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem; }
+
+  .quiz-result {
+    display: none; text-align: center; padding: 40px 20px;
+  }
+  .quiz-result.show { display: block; }
+  .result-score {
+    font-family: 'Playfair Display', serif;
+    font-size: 5rem; font-weight: 900; color: var(--gold); display: block;
+  }
+  .result-msg { font-size: 1.1rem; color: #aaa; margin-top: 12px; }
+  .retry-btn {
+    margin-top: 28px; background: transparent;
+    border: 1px solid rgba(255,255,255,0.2); color: #ccc;
+    border-radius: 8px; padding: 10px 24px;
+    cursor: pointer; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem; letter-spacing: 0.1em;
+    transition: all 0.2s;
+  }
+  .retry-btn:hover { border-color: #fff; color: #fff; }
+
+  /* ─── CHEATSHEET ─── */
+  #cheatsheet { background: var(--cream); }
+
+  .cheat-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px; margin-top: 32px;
+  }
+  .cheat-card {
+    background: #fff; border-radius: 12px;
+    padding: 22px 20px;
+    border: 1px solid #e0d8c8;
+    transition: transform 0.2s;
+  }
+  .cheat-card:hover { transform: translateY(-3px); }
+  .cheat-icon { font-size: 1.6rem; margin-bottom: 10px; }
+  .cheat-card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem; font-weight: 700; margin-bottom: 10px; color: var(--ink);
+  }
+  .cheat-list { list-style: none; }
+  .cheat-list li {
+    font-size: 0.88rem; color: #555; line-height: 1.6;
+    padding: 3px 0; border-bottom: 1px dashed #eee;
+  }
+  .cheat-list li:last-child { border-bottom: none; }
+  .cheat-list li strong { color: var(--ink); }
+
+  /* ─── GLOSSARY ─── */
+  #glossary { background: #fff; }
+  .gloss-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 28px; }
+  .gloss-item {
+    border: 1px solid #e0d8c8; border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .gloss-term {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem; color: var(--teal); font-weight: 500; margin-bottom: 6px;
+  }
+  .gloss-def { font-size: 0.88rem; color: #555; line-height: 1.6; }
+
+  /* ─── FOOTER ─── */
+  #footer {
+    background: var(--ink); color: #555;
+    padding: 40px 20px; text-align: center;
+  }
+  #footer .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem; color: #fff; margin-bottom: 8px;
+  }
+  #footer p { font-size: 0.8rem; line-height: 1.7; }
+
+  /* ─── HIGHLIGHT TEXT ─── */
+  mark { background: var(--highlight); padding: 1px 4px; border-radius: 3px; }
+
+  /* ─── SECTION TITLES ─── */
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 700; line-height: 1.2; margin-bottom: 20px;
+  }
+  .section-title em { color: var(--rose); font-style: italic; }
+  #how .section-title { color: #fff; }
+  #how .section-title em { color: var(--teal-light); }
+
+  /* ─── DIVIDER ─── */
+  .fancy-divider {
+    display: flex; align-items: center; gap: 16px; margin: 36px 0;
+  }
+  .fancy-divider::before, .fancy-divider::after {
+    content: ''; flex: 1; height: 1px; background: #d0c8b8;
+  }
+  .fancy-divider span {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem;
+    color: var(--muted); letter-spacing: 0.2em; text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* ─── DATASET CARDS ─── */
+  .dataset-duo {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 28px 0;
+  }
+  @media (max-width: 600px) { .dataset-duo { grid-template-columns: 1fr; } }
+  .dataset-card {
+    border-radius: 12px; padding: 24px;
+    position: relative; overflow: hidden;
+  }
+  .dataset-card.busi { background: linear-gradient(135deg, #1a4a6b, #2e7bb5); color: #fff; }
+  .dataset-card.breakhis { background: linear-gradient(135deg, #5a1a2a, #b5405a); color: #fff; }
+  .dataset-name {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem;
+    letter-spacing: 0.2em; opacity: 0.7; margin-bottom: 8px;
+  }
+  .dataset-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; margin-bottom: 12px; }
+  .dataset-stat { font-size: 0.88rem; opacity: 0.85; line-height: 1.7; }
+  .dataset-num { font-size: 2.2rem; font-weight: 700; font-family: 'Playfair Display', serif; opacity: 0.25; position: absolute; bottom: 12px; right: 18px; }
+
+  /* animations */
+  .reveal { opacity: 0; transform: translateY(30px); transition: all 0.7s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<nav id="nav-dots">
+  <div class="nav-dot active" onclick="scrollToSection('cover')" title="Cover"></div>
+  <div class="nav-dot" onclick="scrollToSection('problem')" title="The Problem"></div>
+  <div class="nav-dot" onclick="scrollToSection('solution')" title="The Solution"></div>
+  <div class="nav-dot" onclick="scrollToSection('how')" title="How It Works"></div>
+  <div class="nav-dot" onclick="scrollToSection('results')" title="Results"></div>
+  <div class="nav-dot" onclick="scrollToSection('quiz')" title="Quiz"></div>
+  <div class="nav-dot" onclick="scrollToSection('cheatsheet')" title="Cheat Sheet"></div>
+  <div class="nav-dot" onclick="scrollToSection('glossary')" title="Glossary"></div>
+</nav>
+
+<!-- ════════════════ COVER ════════════════ -->
+<section id="cover">
+  <div class="cover-bg"></div>
+  <div class="dna-grid"></div>
+  <div class="cover-content">
+    <span class="cover-tag">Research Paper Decoded · IEEE Conference 2026</span>
+    <h1 class="cover-title">The AI That Learns to<br><em>See Cancer</em></h1>
+    <p class="cover-subtitle">A story about teaching machines to detect what doctors sometimes miss — and why a tiny model beat giants at the most critical task in medicine.</p>
+    <p class="cover-authors">Shobhit Jain · Preeti Gupta · Pooja Malhotra · Sandeep Shukla · Ayush Gupta · Utkarsh Mishra<br>Galgotias University, Greater Noida, India</p>
+
+    <div class="stat-ticker">
+      <div class="stat-pill">
+        <span class="stat-num">50%</span>
+        <span class="stat-desc">Rise in breast cancer cases<br>in India (10 years)</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-num">25%</span>
+        <span class="stat-desc">Variability among<br>pathologists</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-num">93.75%</span>
+        <span class="stat-desc">Best accuracy achieved<br>(BreakHis dataset)</span>
+      </div>
+    </div>
+
+    <div class="scroll-cue">
+      <span>Start reading</span>
+      <span class="scroll-arrow">↓</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ THE PROBLEM ════════════════ -->
+<section id="problem" class="section">
+  <div class="section-inner">
+    <span class="chapter-label">Chapter 01 — The Problem</span>
+    <div class="big-quote reveal">
+      "If detected early, your chances of surviving breast cancer are <span>over 99%</span>. Wait too long — it drops to just 27%."
+    </div>
+
+    <p class="body-text reveal">Breast cancer is the most common cancer among women worldwide. In India alone, cases have risen <strong>50% over the past decade</strong>. A lump appears when breast tissue grows uncontrollably. These lumps are either <em>benign</em> (harmless, slow-growing) or <em>malignant</em> (dangerous, fast-spreading).</p>
+
+    <div class="survival-viz reveal">
+      <div class="survival-card good">
+        <span class="survival-pct">99%+</span>
+        <div class="survival-label">5-Year Survival Rate</div>
+        <div class="survival-stage">// Early detection</div>
+      </div>
+      <div class="survival-card bad">
+        <span class="survival-pct">27%</span>
+        <div class="survival-label">5-Year Survival Rate</div>
+        <div class="survival-stage">// Late-stage detection</div>
+      </div>
+    </div>
+
+    <p class="body-text reveal">The gap between those two numbers is everything. And yet, the tools doctors use today — biopsies, ultrasounds, microscopes — all depend on <strong>human interpretation</strong>. And humans disagree.</p>
+
+    <div class="callout-box reveal">
+      <div class="callout-title">⚠ The Disagreement Problem</div>
+      <div class="callout-text">Pathologists agree on biopsy readings only <strong>75–96% of the time</strong>, depending on case difficulty. Ultrasounds are even harder to interpret when breast tissue is dense. This 25% variability is not acceptable when lives are at stake.</div>
+    </div>
+
+    <p class="body-text reveal">Manual diagnosis is also expensive, slow, and prone to missing subtle early signs. As medical imaging grows globally — especially in low-resource settings — the world needs a tool that is <mark>consistent, fast, and scalable</mark>.</p>
+
+    <div class="callout-box gold reveal">
+      <div class="callout-title">💡 The Core Question</div>
+      <div class="callout-text">Can we train a computer to look at a breast scan or tissue sample and tell us — reliably — whether it's cancerous? And can it do this better, faster, and more consistently than a human?</div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ THE SOLUTION ════════════════ -->
+<section id="solution" class="section">
+  <div class="section-inner">
+    <span class="chapter-label">Chapter 02 — The Solution</span>
+    <h2 class="section-title reveal">Transfer Learning:<br><em>Teaching old models new tricks</em></h2>
+
+    <p class="body-text reveal">Deep learning models need <em>enormous</em> amounts of training data. Medical datasets are tiny. This creates a problem — but Transfer Learning solves it brilliantly.</p>
+
+    <div class="callout-box teal reveal">
+      <div class="callout-title">🧠 What is Transfer Learning?</div>
+      <div class="callout-text">Imagine hiring a chef who already knows how to cook Italian food and then training them to cook Indian food. They don't start from zero — they already understand heat, seasoning, texture. Transfer learning does the same: take a model pre-trained on <strong>millions of general images (ImageNet)</strong>, then fine-tune it on a specific medical dataset. The model already "knows" edges, shapes, and textures. You just teach it what cancer looks like.</div>
+    </div>
+
+    <p class="body-text reveal">This paper tests <strong>four pre-trained deep learning models</strong> on breast cancer images from two completely different sources:</p>
+
+    <div class="model-grid reveal">
+      <div class="model-card">
+        <div class="model-icon">🏗️</div>
+        <div class="model-name">VGG16</div>
+        <div class="model-params">138 Million parameters</div>
+        <div class="model-params">The classic, powerful but heavy</div>
+      </div>
+      <div class="model-card">
+        <div class="model-icon">⛓️</div>
+        <div class="model-name">ResNet50</div>
+        <div class="model-params">25.6 Million parameters</div>
+        <div class="model-params">Skip connections prevent vanishing gradients</div>
+      </div>
+      <div class="model-card">
+        <div class="model-icon">🕸️</div>
+        <div class="model-name">DenseNet121</div>
+        <div class="model-params">8 Million parameters</div>
+        <div class="model-params">Every layer connects to every other</div>
+      </div>
+      <div class="model-card">
+        <div class="model-icon">⚡</div>
+        <div class="model-name">EfficientNetB0</div>
+        <div class="model-params">5.3 Million parameters</div>
+        <div class="model-best">★ WINNER — Best accuracy, smallest size</div>
+      </div>
+    </div>
+
+    <div class="fancy-divider"><span>The Two Datasets</span></div>
+
+    <div class="dataset-duo reveal">
+      <div class="dataset-card busi">
+        <div class="dataset-name">DATASET 01</div>
+        <div class="dataset-title">BUSI — Ultrasound Scans</div>
+        <div class="dataset-stat">
+          📊 1,578 images<br>
+          🟢 891 benign<br>
+          🔴 421 malignant<br>
+          ⚪ 266 normal<br><br>
+          Low resolution, noisy — harder to classify
+        </div>
+        <div class="dataset-num">US</div>
+      </div>
+      <div class="dataset-card breakhis">
+        <div class="dataset-name">DATASET 02</div>
+        <div class="dataset-title">BreakHis — Histopathology</div>
+        <div class="dataset-stat">
+          📊 7,909 images<br>
+          🟢 2,480 benign<br>
+          🔴 5,429 malignant<br>
+          🔬 Magnifications: 40x, 100x, 200x, 400x<br><br>
+          High-res microscopic tissue slides
+        </div>
+        <div class="dataset-num">HP</div>
+      </div>
+    </div>
+
+    <p class="body-text reveal">Testing on both datasets is the key innovation — ultrasound and histopathology are completely different visual domains. A model that handles both is truly general-purpose.</p>
+  </div>
+</section>
+
+<!-- ════════════════ HOW IT WORKS ════════════════ -->
+<section id="how" class="section">
+  <div class="section-inner">
+    <span class="chapter-label">Chapter 03 — How It Actually Works</span>
+    <h2 class="section-title reveal">The pipeline:<br><em>From raw scan to diagnosis</em></h2>
+
+    <div class="pipeline-steps reveal">
+      <div class="pipeline-step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-title">Data Collection</div>
+          <div class="step-body">Download BUSI and BreakHis datasets from Kaggle. Organize by class (benign/malignant/normal) and magnification level. Store locally.</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-title">Preprocessing — Resize & Normalize</div>
+          <div class="step-body">All images resized to <strong>224×224 pixels</strong> (3 color channels). Pixel values normalized to [0,1]. This matches what each pretrained model expects from ImageNet training.</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-title">Data Augmentation (Training Set Only)</div>
+          <div class="step-body">To prevent overfitting on small datasets: rotate ±20°, flip horizontally, shift width/height ±20%, zoom ±20%, shear 0.1. This artificially multiplies data diversity. <strong>Validation and test sets are NOT augmented</strong> — to get real-world performance numbers.</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-title">Transfer Learning — Freeze the Backbone</div>
+          <div class="step-body">Load pretrained model weights (from ImageNet). <strong>Freeze all convolutional layers</strong> — they already know how to extract features. Only the classification "head" is trained on medical data. This is faster and prevents overfitting.</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <div class="step-title">Custom Classification Head</div>
+          <div class="step-body">
+            <strong>Global Average Pooling</strong> → compresses feature maps to a vector<br>
+            <strong>Dense (256 neurons, ReLU)</strong> → learns complex patterns<br>
+            <strong>Dropout (0.55)</strong> → randomly disables 55% of neurons during training to prevent memorization<br>
+            <strong>Softmax output</strong> → 3 classes for BUSI, 2 for BreakHis<br><br>
+            <em>Why 0.55 dropout specifically?</em> At 0.5, the model overfit after 12 epochs. At 0.7, it couldn't learn at all (accuracy stuck below 75%). 0.55 was the sweet spot.
+          </div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">6</div>
+        <div class="step-content">
+          <div class="step-title">Optimizer Battle: Adam vs AdamW vs SGD</div>
+          <div class="step-body">
+            Tested three optimizers:<br>
+            <strong>Adam</strong> — fastest convergence, best validation accuracy ✓<br>
+            <strong>AdamW</strong> — adds weight decay, but no benefit here since dropout already handles regularization<br>
+            <strong>SGD</strong> — slow, sensitive to learning rate, no improvement<br><br>
+            <strong>Winner: Adam</strong> with learning rate = 0.0001. Trained for 30 epochs, batch size 32.
+          </div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">7</div>
+        <div class="step-content">
+          <div class="step-title">Early Stopping (Patience = 7)</div>
+          <div class="step-body">If validation loss doesn't improve for 7 consecutive epochs, training stops automatically and best weights are restored. Prevents wasted computation and overfitting.</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">8</div>
+        <div class="step-content">
+          <div class="step-title">Evaluation Metrics</div>
+          <div class="step-body">
+            <strong>Accuracy</strong> — overall correct predictions<br>
+            <strong>Precision</strong> — of predicted cancers, how many are actually cancer?<br>
+            <strong>Recall</strong> — of actual cancers, how many did we find?<br>
+            <strong>F1 Score</strong> — harmonic mean of precision and recall<br>
+            <strong>AUC-ROC</strong> — model's ability to distinguish classes across thresholds<br>
+            <strong>Confusion Matrix</strong> — visual breakdown of where the model got confused
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ RESULTS ════════════════ -->
+<section id="results" class="section">
+  <div class="section-inner">
+    <span class="chapter-label">Chapter 04 — The Results</span>
+    <h2 class="section-title reveal">Numbers don't lie.<br><em>EfficientNetB0 wins.</em></h2>
+
+    <p class="body-text reveal">After training and testing all four models on both datasets, here's what happened. The smallest model won — decisively.</p>
+
+    <table class="results-table reveal">
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>Parameters</th>
+          <th>BUSI Accuracy</th>
+          <th>BreakHis Accuracy</th>
+          <th>Inference Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>VGG16</td>
+          <td>138M</td>
+          <td>
+            <div class="accuracy-bar-wrap">
+              85.2%
+              <div class="accuracy-bar-bg"><div class="accuracy-bar-fill" style="width:85.2%"></div></div>
+            </div>
+          </td>
+          <td>
+            <div class="accuracy-bar-wrap">
+              89.3%
+              <div class="accuracy-bar-bg"><div class="accuracy-bar-fill" style="width:89.3%"></div></div>
+            </div>
+          </td>
+          <td>45ms</td>
+        </tr>
+        <tr>
+          <td>ResNet50</td>
+          <td>25.6M</td>
+          <td>
+            <div class="accuracy-bar-wrap">
+              86.7%
+              <div class="accuracy-bar-bg"><div class="accuracy-bar-fill" style="width:86.7%"></div></div>
+            </div>
+          </td>
+          <td>
+            <div class="accuracy-bar-wrap">
+              91.2%
+              <div class="accuracy-bar-bg"><div class="accuracy-bar-fill" style="width:91.2%"></div></div>
+            </div>
+          </td>
+          <td>32ms</td>
+        </tr>
+        <tr>
+          <td>DenseNet121</td>
+          <td>8.0M</td>
+          <td>
+            <div class="accuracy-bar-wrap">
+              87.1%
+              <div class="accuracy-bar-bg"><div class="accuracy-bar-fill" style="width:87.1%"></div></div>
+            </div>
+          </td>
+          <td>
+            <div class="accuracy-bar-wrap">
+              92.1%
+              <div class="accuracy-bar-bg"><div class="accuracy-bar-fill" style="width:92.1%"></div></div>
+            </div>
+          </td>
+          <td>28ms</td>
+        </tr>
+        <tr class="winner">
+          <td>EfficientNetB0 <span class="winner-badge">BEST</span></td>
+          <td>5.3M</td>
+          <td>
+            <div class="accuracy-bar-wrap">
+              <strong>89.08%</strong>
+              <div class="accuracy-bar-bg"><div class="accuracy-bar-fill rose-bar" style="width:89.08%"></div></div>
+            </div>
+          </td>
+          <td>
+            <div class="accuracy-bar-wrap">
+              <strong>93.75%</strong>
+              <div class="accuracy-bar-bg"><div class="accuracy-bar-fill rose-bar" style="width:93.75%"></div></div>
+            </div>
+          </td>
+          <td><strong>22ms</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout-box teal reveal">
+      <div class="callout-title">🏆 Why EfficientNetB0 Won</div>
+      <div class="callout-text">
+        EfficientNetB0 uses <strong>compound scaling</strong> — it scales depth, width, and resolution simultaneously rather than in isolation. This makes it exceptionally efficient per parameter.<br><br>
+        It achieved highest accuracy with <strong>4.8× fewer parameters than ResNet50</strong> and <strong>26× fewer than VGG16</strong>. In real-world healthcare, this means faster inference on cheaper hardware — critical for low-resource settings.
+      </div>
+    </div>
+
+    <div class="fancy-divider"><span>Confusion Matrix Insight</span></div>
+
+    <p class="body-text reveal">On the <strong>BUSI dataset</strong> (3 classes): The model correctly classified most benign cases (86/134) but struggled with normal tissue — 21 normal samples were misclassified as malignant. This is clinically acceptable — it's safer to over-flag than under-flag cancer.</p>
+
+    <p class="body-text reveal">On <strong>BreakHis</strong> (2 classes): Strong performance — 323 benign correctly classified, 766 malignant correctly classified. Only 49 in each class were misclassified — impressive on a 1,186-sample test set.</p>
+
+    <div class="callout-box reveal">
+      <div class="callout-title">⚡ Future Directions</div>
+      <div class="callout-text">Limitations include: models work best on high-resolution, low-noise images. Future work will explore noise filtering, image enhancement, and Vision Transformers (ViTs) for even better performance. External validation on new hospital datasets is also needed before clinical deployment.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ QUIZ ════════════════ -->
+<section id="quiz" class="section">
+  <div class="section-inner quiz-wrapper">
+    <span class="chapter-label">Chapter 05 — Test Yourself</span>
+    <div class="quiz-title">Can you answer an interviewer?</div>
+    <p class="quiz-subtitle">10 questions. Every answer is directly from the paper. Score yourself honestly.</p>
+
+    <div id="quiz-container">
+      <!-- Q1 -->
+      <div class="quiz-q active" data-q="0">
+        <div class="q-number">QUESTION 01 / 10</div>
+        <div class="q-text">By how much has breast cancer risen in India over the past 10 years?</div>
+        <div class="q-options">
+          <button class="q-opt" data-correct="false">25%</button>
+          <button class="q-opt" data-correct="true">50%</button>
+          <button class="q-opt" data-correct="false">75%</button>
+          <button class="q-opt" data-correct="false">100%</button>
+        </div>
+        <div class="q-feedback"></div>
+      </div>
+      <!-- Q2 -->
+      <div class="quiz-q" data-q="1">
+        <div class="q-number">QUESTION 02 / 10</div>
+        <div class="q-text">What is the 5-year survival rate for breast cancer when detected early?</div>
+        <div class="q-options">
+          <button class="q-opt" data-correct="false">75%</button>
+          <button class="q-opt" data-correct="false">85%</button>
+          <button class="q-opt" data-correct="true">Over 99%</button>
+          <button class="q-opt" data-correct="false">60%</button>
+        </div>
+        <div class="q-feedback"></div>
+      </div>
+      <!-- Q3 -->
+      <div class="quiz-q" data-q="2">
+        <div class="q-number">QUESTION 03 / 10</div>
+        <div class="q-text">What size were all images resized to before being fed into the models?</div>
+        <div class="q-options">
+          <button class="q-opt" data-correct="false">128×128</button>
+          <button class="q-opt" data-correct="true">224×224</button>
+          <button class="q-opt" data-correct="false">256×256</button>
+          <button class="q-opt" data-correct="false">512×512</button>
+        </div>
+        <div class="q-feedback"></div>
+      </div>
+      <!-- Q4 -->
+      <div class="quiz-q" data-q="3">
+        <div class="q-number">QUESTION 04 / 10</div>
+        <div class="q-text">Which model achieved the best accuracy on BOTH datasets?</div>
+        <div class="q-options">
+          <button class="q-opt" data-correct="false">VGG16</button>
+          <button class="q-opt" data-correct="false">ResNet50</button>
+          <button class="q-opt" data-correct="false">DenseNet121</button>
+          <button class="q-opt" data-correct="true">EfficientNetB0</button>
+        </div>
+        <div class="q-feedback"></div>
+      </div>
+      <!-- Q5 -->
+      <div class="quiz-q" data-q="4">
+        <div class="q-number">QUESTION 05 / 10</div>
+        <div class="q-text">What dropout rate was used and why not 0.5 or 0.7?</div>
+        <div class="q-options">
+          <button class="q-opt" data-correct="false">0.5 — standard value</button>
+          <button class="q-opt" data-correct="false">0.7 — higher is always better</button>
+          <button class="q-opt" data-correct="true">0.55 — 0.5 caused overfitting, 0.7 kept accuracy below 75%</button>
+          <button class="q-opt" data-correct="false">0.3 — to allow more neurons to activate</button>
+        </div>
+        <div class="q-feedback"></div>
+      </div>
+      <!-- Q6 -->
+      <div class="quiz-q" data-q="5">
+        <div class="q-number">QUESTION 06 / 10</div>
+        <div class="q-text">Why was the Adam optimizer chosen over AdamW and SGD?</div>
+        <div class="q-options">
+          <button class="q-opt" data-correct="false">Adam has more parameters to tune</button>
+          <button class="q-opt" data-correct="true">Adam showed faster convergence and better validation accuracy; AdamW added no benefit since dropout already regularized, SGD was slow</button>
+          <button class="q-opt" data-correct="false">AdamW and SGD are deprecated</button>
+          <button class="q-opt" data-correct="false">Adam uses less memory</button>
+        </div>
+        <div class="q-feedback"></div>
+      </div>
+      <!-- Q7 -->
+      <div class="quiz-q" data-q="6">
+        <div class="q-number">QUESTION 07 / 10</div>
+        <div class="q-text">How many images are in the BUSI dataset, and how many classes?</div>
+        <div class="q-options">
+          <button class="q-opt" data-correct="false">7,909 images, 2 classes</button>
+          <button class="q-opt" data-correct="false">1,578 images, 2 classes</button>
+          <button class="q-opt" data-correct="true">1,578 images, 3 classes (benign, malignant, normal)</button>
+          <button class="q-opt" data-correct="false">7,909 images, 3 classes</button>
+        </div>
+        <div class="q-feedback"></div>
+      </div>
+      <!-- Q8 -->
+      <div class="quiz-q" data-q="7">
+        <div class="q-number">QUESTION 08 / 10</div>
+        <div class="q-text">What was the train/test split ratio used?</div>
+        <div class="q-options">
+          <button class="q-opt" data-correct="false">80:20</button>
+          <button class="q-opt" data-correct="true">70:30</button>
+          <button class="q-opt" data-correct="false">60:40</button>
+          <button class="q-opt" data-correct="false">75:25</button>
+        </div>
+        <div class="q-feedback"></div>
+      </div>
+      <!-- Q9 -->
+      <div class="quiz-q" data-q="8">
+        <div class="q-number">QUESTION 09 / 10</div>
+        <div class="q-text">EfficientNetB0 has 5.3M parameters. How many times fewer than ResNet50?</div>
+        <div class="q-options">
+          <button class="q-opt" data-correct="false">2.4x fewer</button>
+          <button class="q-opt" data-correct="false">3.1x fewer</button>
+          <button class="q-opt" data-correct="true">4.8x fewer</button>
+          <button class="q-opt" data-correct="false">26x fewer</button>
+        </div>
+        <div class="q-feedback"></div>
+      </div>
+      <!-- Q10 -->
+      <div class="quiz-q" data-q="9">
+        <div class="q-number">QUESTION 10 / 10</div>
+        <div class="q-text">What does "early stopping with patience 7" mean in this paper?</div>
+        <div class="q-options">
+          <button class="q-opt" data-correct="false">Training runs for exactly 7 epochs</button>
+          <button class="q-opt" data-correct="false">The model waits 7 seconds before each epoch</button>
+          <button class="q-opt" data-correct="true">If validation loss doesn't improve for 7 consecutive epochs, training stops and best weights are restored</button>
+          <button class="q-opt" data-correct="false">7 models are trained in parallel</button>
+        </div>
+        <div class="q-feedback"></div>
+      </div>
+
+      <div class="q-nav">
+        <button class="q-btn" id="prev-btn" disabled onclick="changeQ(-1)">← Prev</button>
+        <span class="q-score-display" id="score-display">0 / 0 correct</span>
+        <button class="q-btn" id="next-btn" onclick="changeQ(1)">Next →</button>
+      </div>
+    </div>
+
+    <div class="quiz-result" id="quiz-result">
+      <span class="result-score" id="final-score">0/10</span>
+      <div class="result-msg" id="result-msg"></div>
+      <button class="retry-btn" onclick="resetQuiz()">↺ Try Again</button>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ CHEAT SHEET ════════════════ -->
+<section id="cheatsheet" class="section">
+  <div class="section-inner">
+    <span class="chapter-label">Chapter 06 — Quick Reference</span>
+    <h2 class="section-title reveal">The complete<br><em>cheat sheet</em></h2>
+    <p class="body-text reveal">Everything you need to remember — organized for fast recall.</p>
+
+    <div class="cheat-grid">
+      <div class="cheat-card reveal">
+        <div class="cheat-icon">🎯</div>
+        <div class="cheat-card-title">Problem Statement</div>
+        <ul class="cheat-list">
+          <li><strong>50%</strong> rise in India breast cancer (10 yrs)</li>
+          <li><strong>25%</strong> pathologist variability</li>
+          <li>Early detection: <strong>>99%</strong> survival</li>
+          <li>Late detection: <strong>27%</strong> survival</li>
+          <li>Need: consistent, scalable diagnostic AI</li>
+        </ul>
+      </div>
+      <div class="cheat-card reveal">
+        <div class="cheat-icon">📦</div>
+        <div class="cheat-card-title">Datasets</div>
+        <ul class="cheat-list">
+          <li><strong>BUSI</strong>: 1,578 images, 3 classes (US)</li>
+          <li>891 benign, 421 malignant, 266 normal</li>
+          <li><strong>BreakHis</strong>: 7,909 images, 2 classes (HP)</li>
+          <li>2,480 benign, 5,429 malignant</li>
+          <li>Split: <strong>70 train / 15 val / 15 test</strong></li>
+        </ul>
+      </div>
+      <div class="cheat-card reveal">
+        <div class="cheat-icon">🔧</div>
+        <div class="cheat-card-title">Preprocessing</div>
+        <ul class="cheat-list">
+          <li>Resize: <strong>224×224×3</strong></li>
+          <li>Normalize: [0, 1]</li>
+          <li>Augmentation training only</li>
+          <li>Rotation: <strong>±20°</strong></li>
+          <li>Zoom, flip, shift, shear</li>
+          <li>Fill: nearest-neighbor</li>
+        </ul>
+      </div>
+      <div class="cheat-card reveal">
+        <div class="cheat-icon">🧠</div>
+        <div class="cheat-card-title">Model Architecture</div>
+        <ul class="cheat-list">
+          <li>Frozen backbone (convolutional layers)</li>
+          <li>Global Average Pooling</li>
+          <li>Dense: <strong>256 neurons (ReLU)</strong></li>
+          <li>Dropout: <strong>0.55</strong></li>
+          <li>Output: Softmax (2 or 3 classes)</li>
+          <li>VGG16 extra: 512-neuron layer</li>
+        </ul>
+      </div>
+      <div class="cheat-card reveal">
+        <div class="cheat-icon">⚙️</div>
+        <div class="cheat-card-title">Training Config</div>
+        <ul class="cheat-list">
+          <li>Optimizer: <strong>Adam</strong></li>
+          <li>Learning rate: <strong>1×10⁻⁴</strong></li>
+          <li>Batch size: <strong>32</strong></li>
+          <li>Epochs: <strong>30</strong></li>
+          <li>Early stopping patience: <strong>7</strong></li>
+          <li>Loss: Categorical cross-entropy</li>
+        </ul>
+      </div>
+      <div class="cheat-card reveal">
+        <div class="cheat-icon">📊</div>
+        <div class="cheat-card-title">Results Summary</div>
+        <ul class="cheat-list">
+          <li>VGG16: 85.2% / 89.3%</li>
+          <li>ResNet50: 86.7% / 91.2%</li>
+          <li>DenseNet121: 87.1% / 92.1%</li>
+          <li><strong>EfficientNetB0: 89.08% / 93.75% ★</strong></li>
+          <li>Inference: 22ms (fastest)</li>
+          <li>Params: 5.3M (smallest)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ GLOSSARY ════════════════ -->
+<section id="glossary" class="section">
+  <div class="section-inner">
+    <span class="chapter-label">Chapter 07 — Glossary</span>
+    <h2 class="section-title reveal">Terms you <em>must know</em></h2>
+
+    <div class="gloss-grid reveal">
+      <div class="gloss-item">
+        <div class="gloss-term">Transfer Learning</div>
+        <div class="gloss-def">Using a model pre-trained on large data (ImageNet) and fine-tuning it for a new, smaller dataset. Leverages existing knowledge instead of training from scratch.</div>
+      </div>
+      <div class="gloss-item">
+        <div class="gloss-term">Benign vs Malignant</div>
+        <div class="gloss-def">Benign tumors grow slowly and don't spread. Malignant tumors grow rapidly and invade nearby cells — these are cancerous and life-threatening.</div>
+      </div>
+      <div class="gloss-item">
+        <div class="gloss-term">Overfitting</div>
+        <div class="gloss-def">When a model memorizes training data and fails on new data. Prevented here using dropout (0.55), data augmentation, and early stopping.</div>
+      </div>
+      <div class="gloss-item">
+        <div class="gloss-term">Dropout</div>
+        <div class="gloss-def">Randomly disabling a fraction of neurons during training. Forces the network to learn redundant representations — a regularization technique.</div>
+      </div>
+      <div class="gloss-item">
+        <div class="gloss-term">Adam Optimizer</div>
+        <div class="gloss-def">Adaptive Moment Estimation. Adjusts learning rate per parameter using first and second moment estimates. Fast convergence, works well on sparse gradients.</div>
+      </div>
+      <div class="gloss-item">
+        <div class="gloss-term">AUC-ROC</div>
+        <div class="gloss-def">Area Under the Receiver Operating Characteristic curve. Measures how well the model distinguishes between classes across all decision thresholds. 1.0 = perfect.</div>
+      </div>
+      <div class="gloss-item">
+        <div class="gloss-term">Confusion Matrix</div>
+        <div class="gloss-def">A grid showing True Positives, True Negatives, False Positives, and False Negatives. Visually reveals where the model makes mistakes.</div>
+      </div>
+      <div class="gloss-item">
+        <div class="gloss-term">Early Stopping</div>
+        <div class="gloss-def">Automatically halt training when validation loss stops improving for N epochs (patience). Best weights are saved and restored — prevents wasteful over-training.</div>
+      </div>
+      <div class="gloss-item">
+        <div class="gloss-term">Global Average Pooling</div>
+        <div class="gloss-def">Takes the average value of each feature map to produce a single number per map. Converts 3D feature volume to a flat 1D vector for classification.</div>
+      </div>
+      <div class="gloss-item">
+        <div class="gloss-term">Stratified Sampling</div>
+        <div class="gloss-def">Splitting data while maintaining class proportions in each split. Prevents a situation where one class dominates the training or test set.</div>
+      </div>
+      <div class="gloss-item">
+        <div class="gloss-term">Histopathology</div>
+        <div class="gloss-def">Study of diseased tissue under a microscope. BreakHis provides these high-res tissue slide images at 40x, 100x, 200x, 400x magnification.</div>
+      </div>
+      <div class="gloss-item">
+        <div class="gloss-term">EfficientNetB0</div>
+        <div class="gloss-def">A model that scales network depth, width, and input resolution together (compound scaling) for maximum efficiency. 5.3M parameters, best accuracy here.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ FOOTER ════════════════ -->
+<footer id="footer">
+  <div class="logo">Breast Cancer Detection Using Transfer Learning</div>
+  <p>Shobhit Jain et al. · Department of CSE, Galgotias University, Greater Noida<br>
+  This interactive explainer was generated from the original research paper for educational purposes.</p>
+</footer>
+
+<script>
+  // ─── PROGRESS BAR ───
+  window.addEventListener('scroll', () => {
+    const total = document.body.scrollHeight - window.innerHeight;
+    const pct = (window.scrollY / total) * 100;
+    document.getElementById('progress-bar').style.width = pct + '%';
+  });
+
+  // ─── NAV DOTS ───
+  const sections = ['cover','problem','solution','how','results','quiz','cheatsheet','glossary'];
+  const dots = document.querySelectorAll('.nav-dot');
+
+  function scrollToSection(id) {
+    document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = sections.indexOf(e.target.id);
+        dots.forEach(d => d.classList.remove('active'));
+        if (idx >= 0) dots[idx].classList.add('active');
+      }
+    });
+  }, { threshold: 0.3 });
+
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el);
+  });
+
+  // ─── REVEAL ANIMATIONS ───
+  const revealObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+  // ─── QUIZ LOGIC ───
+  const answers = [
+    { correct: 1, explanation: "The paper states cases in India rose 50% over the past 10 years." },
+    { correct: 2, explanation: "Early detection gives over 99% 5-year survival rate. Late stage drops to 27%." },
+    { correct: 1, explanation: "All images resized to 224×224×3 to match pretrained model input requirements." },
+    { correct: 3, explanation: "EfficientNetB0 achieved 89.08% on BUSI and 93.75% on BreakHis — best on both." },
+    { correct: 2, explanation: "0.55 was found experimentally. 0.5 caused overfitting after epoch 12. 0.7 kept accuracy below 75%." },
+    { correct: 1, explanation: "Adam showed fastest convergence. AdamW's weight decay was redundant with dropout. SGD was slow." },
+    { correct: 2, explanation: "BUSI has 1,578 images and 3 classes: benign (891), malignant (421), normal (266)." },
+    { correct: 1, explanation: "The paper uses a 70:30 train-test split with stratified sampling." },
+    { correct: 2, explanation: "ResNet50 has 25.6M params. 25.6/5.3 ≈ 4.8x. EfficientNetB0 is 26x fewer than VGG16's 138M." },
+    { correct: 2, explanation: "Patience 7 means: if validation loss doesn't improve for 7 epochs, stop training and restore best weights." }
+  ];
+
+  let currentQ = 0;
+  let score = 0;
+  let answered = new Array(10).fill(false);
+  let correct = new Array(10).fill(false);
+
+  function changeQ(dir) {
+    const qs = document.querySelectorAll('.quiz-q');
+    qs[currentQ].classList.remove('active');
+    currentQ = Math.max(0, Math.min(9, currentQ + dir));
+    qs[currentQ].classList.add('active');
+    updateNav();
+
+    if (currentQ === 9 && answered.filter(Boolean).length === 10) {
+      setTimeout(showResult, 500);
+    }
+  }
+
+  function updateNav() {
+    document.getElementById('prev-btn').disabled = currentQ === 0;
+    document.getElementById('next-btn').disabled = currentQ === 9;
+    const total = answered.filter(Boolean).length;
+    const s = correct.filter(Boolean).length;
+    document.getElementById('score-display').textContent = `${s} / ${total} correct`;
+  }
+
+  document.querySelectorAll('.q-opt').forEach((btn, idx) => {
+    const qDiv = btn.closest('.quiz-q');
+    const qIdx = parseInt(qDiv.dataset.q);
+    btn.addEventListener('click', () => {
+      if (answered[qIdx]) return;
+      answered[qIdx] = true;
+
+      const opts = qDiv.querySelectorAll('.q-opt');
+      const fb = qDiv.querySelector('.q-feedback');
+      const isCorrect = btn.dataset.correct === 'true';
+
+      opts.forEach(o => o.disabled = true);
+
+      if (isCorrect) {
+        btn.classList.add('correct');
+        correct[qIdx] = true;
+        fb.textContent = '✓ Correct! ' + answers[qIdx].explanation;
+        fb.className = 'q-feedback correct-fb show';
+      } else {
+        btn.classList.add('wrong');
+        opts[answers[qIdx].correct].classList.add('correct');
+        fb.textContent = '✗ Not quite. ' + answers[qIdx].explanation;
+        fb.className = 'q-feedback wrong-fb show';
+      }
+
+      updateNav();
+
+      if (answered.filter(Boolean).length === 10) {
+        setTimeout(showResult, 1500);
+      }
+    });
+  });
+
+  function showResult() {
+    document.getElementById('quiz-container').style.display = 'none';
+    const result = document.getElementById('quiz-result');
+    result.classList.add('show');
+    const s = correct.filter(Boolean).length;
+    document.getElementById('final-score').textContent = `${s}/10`;
+    const msgs = [
+      "Keep reading the paper again!",
+      "Getting there — review the methodology section.",
+      "Decent! You understand the basics.",
+      "Good work — you know this paper well.",
+      "Excellent! You could present this at the conference."
+    ];
+    const mi = Math.floor(s / 2.5);
+    document.getElementById('result-msg').textContent = msgs[Math.min(mi, 4)];
+  }
+
+  function resetQuiz() {
+    currentQ = 0;
+    answered = new Array(10).fill(false);
+    correct = new Array(10).fill(false);
+    document.querySelectorAll('.q-opt').forEach(btn => {
+      btn.disabled = false;
+      btn.classList.remove('correct', 'wrong');
+    });
+    document.querySelectorAll('.q-feedback').forEach(fb => {
+      fb.className = 'q-feedback';
+      fb.textContent = '';
+    });
+    document.querySelectorAll('.quiz-q').forEach(q => q.classList.remove('active'));
+    document.querySelectorAll('.quiz-q')[0].classList.add('active');
+    document.getElementById('quiz-result').classList.remove('show');
+    document.getElementById('quiz-container').style.display = 'block';
+    updateNav();
+  }
+
+  updateNav();
+</script>
+</body>
+</html>
